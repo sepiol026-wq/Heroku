@@ -48,7 +48,7 @@ class LoaderRestrictor(loader.Module):
 
     @loader.need_update("poll_answer")
     async def poll_handler(self, update: UpdateMessagePollVote):
-        if not self.get("passed", False):
+        if self.get("passed", False):
             return
 
         logger.debug("Got %s update: %s", update.poll_id, update.to_dict())
@@ -68,14 +68,15 @@ class LoaderRestrictor(loader.Module):
             answers=[
                 PollAnswer(
                     text=TextWithEntities(text=ans, entities=[]),
-                    option=bytes([i]),
+                    option=str(i),
                 )
                 for i, ans in enumerate(step.answer_choices)
             ],
             hash=0,
             quiz=True,
         )
-        await self._client.send_file(
-            message.chat_id,
+        await self.inline.bot.send_file(
+            self.client.tg_id,
             file=InputMediaPoll(poll=poll, correct_answers=[step.answer_index]),
         )
+        await message.delete()
