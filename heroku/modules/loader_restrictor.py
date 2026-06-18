@@ -74,6 +74,8 @@ class LoaderRestrictor(loader.Module):
             ],
             hash=0,
             quiz=True,
+            public_voters=True,
+            revoting_disabled=True,
         )
         await self.inline.bot.send_file(
             self.client.tg_id,
