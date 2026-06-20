@@ -22,13 +22,17 @@ from .. import loader
 
 logger = logging.getLogger(__name__)
 
+ANS_COUNT = 4
+
 
 @dataclass()
 class PollStep:
-    question: str
-    answer_choices: list[str]
+    key: str
     answer_index: int
-    # solution: str
+
+    @property
+    def answer_keys(self):
+        return [f"{self.key}:ans{i + 1}" for i in range(ANS_COUNT)]
 
     def is_correct(self, index: int):
         return self.answer_index == index
@@ -43,29 +47,58 @@ class PollStatus:
 
 
 QUESTIONS = [
-    PollStep("test", ["1", "2", "3", "4"], 0),
-    PollStep("test 1", ["1", "2", "3", "4"], 1),
-    PollStep("test 2", ["1", "2", "3", "4"], 2),
-    PollStep("test 3", ["1", "2", "3", "4"], 3),
-    PollStep("test 4", ["1", "2", "3", "4"], 0),
+    PollStep("q1", 0),
+    PollStep("q2", 1),
+    PollStep("q3", 2),
+    PollStep("q4", 3),
+    PollStep("q5", 0),
 ]
 
 
 @loader.tds
 class LoaderRestrictor(loader.Module):
+    strings = {
+        "name": "LoaderRestrictor",
+        "q1": "test",
+        "q1:ans1": "1",
+        "q1:ans2": "2",
+        "q1:ans3": "3",
+        "q1:ans4": "4",
+        "q2": "test 1",
+        "q2:ans1": "1",
+        "q2:ans2": "2",
+        "q2:ans3": "3",
+        "q2:ans4": "4",
+        "q3": "test 2",
+        "q3:ans1": "1",
+        "q3:ans2": "2",
+        "q3:ans3": "3",
+        "q3:ans4": "4",
+        "q4": "test 3",
+        "q4:ans1": "1",
+        "q4:ans2": "2",
+        "q4:ans3": "3",
+        "q4:ans4": "4",
+        "q5": "test 4",
+        "q5:ans1": "1",
+        "q5:ans2": "2",
+        "q5:ans3": "3",
+        "q5:ans4": "4",
+    }
+
     async def client_ready(self):
         self.poll: PollStatus | None = None
 
     def _build_poll(self, poll_step: PollStep) -> InputMediaPoll:
         poll = Poll(
             id=0,
-            question=TextWithEntities(*html.parse(poll_step.question)),
+            question=TextWithEntities(*html.parse(self.strings[poll_step.key])),
             answers=[
                 PollAnswer(
-                    text=TextWithEntities(*html.parse(ans)),
+                    text=TextWithEntities(*html.parse(self.strings[ans])),
                     option=str(i),
                 )
-                for i, ans in enumerate(poll_step.answer_choices)
+                for i, ans in enumerate(poll_step.answer_keys)
             ],
             hash=0,
             quiz=True,
@@ -108,7 +141,10 @@ class LoaderRestrictor(loader.Module):
         self.poll.poll_id = poll_m.media.poll.id
 
     async def _end_quiz(self):
-        await self.inline.bot.send_message(self.client.tg_id, "done")
+        await self.inline.bot.send_message(
+            self.client.tg_id,
+            f"Done with {len([i for i in self.poll.answers if i])}/{len(self.poll.answers)} correct answers",
+        )
 
     @loader.command()
     async def testquiz(self, message: Message):
